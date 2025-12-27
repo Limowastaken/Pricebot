@@ -2,12 +2,12 @@
 set -e
 
 # === CONFIG ===
-GITHUB_USER="YOUR_GITHUB_USERNAME"
-GITHUB_REPO="iran-price-telegraph"
-GITHUB_TOKEN="YOUR_GITHUB_TOKEN"  # or use GH CLI auth
+GITHUB_USER="Limowastaken"
+GITHUB_REPO="pricebot"
+GITHUB_TOKEN=""  # or use GH CLI auth
 CLOUDFLARE_KV_NAMESPACE="PRICE_KV"
 PROJECT_DIR="iran-price-telegraph"
-TELEGRAPH_TOKEN="PUT_YOUR_TELEGRAPH_TOKEN_HERE"
+TELEGRAPH_TOKEN="fb56a1ddbc42bb99d57aeff12db7598370d5410e004c2e2116039260de33"
 # ==============
 
 # Step 0: Make sure project dir exists
