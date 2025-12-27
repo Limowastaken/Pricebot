@@ -97,7 +97,7 @@ function buildContent(usd, gold18, gold24) {
         { tag: "p", children: [
             { tag: "b", children: ["🕒 زمان بروزرسانی:\n"] },
             `${dateFa} — ${timeFa}`,
-            "\n(به وقت ایران 🇮🇷)"
+            
         ]},
         
         { tag: "p", children: [
@@ -114,8 +114,8 @@ async function createPage(content, token) {
         },
         body: JSON.stringify({
             access_token: token,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            author_name: "Auto Price Bot",
+            title: "قیمت دلار و طلا",
+            author_name: "Limo Price Bot",
             content: content,
             return_content: true
         })
@@ -142,7 +142,7 @@ async function editPage(path, content, token) {
         body: JSON.stringify({
             access_token: token,
             path: path,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
+            title: "قیمت دلار و طلا",
             content: content,
             return_content: true
         })
