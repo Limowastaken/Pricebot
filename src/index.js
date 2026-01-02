@@ -237,7 +237,7 @@ export default {
     const timeFa = `${hour}:${minute}:${second}`;
     
     return { dateFa, timeFa };
-}
+
 
 async function getPrices() {
     const url = "https://call.tgju.org/ajax.json";
