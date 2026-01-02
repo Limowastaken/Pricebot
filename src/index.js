@@ -1,5 +1,5 @@
 const TELEGRAPH_API = "https://api.telegra.ph";
-const STATE_KEY = "telegraph_state";
+const STATE_KEY = "PRICE_STATE";
 
 // ---------- FETCH PRICES ----------
 async function getPrices() {
