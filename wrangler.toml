@@ -2,6 +2,10 @@ name = "telegraph-price-bot"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
+# Environment Variables
+[vars]
+TELEGRAPH_TOKEN = "fb56a1ddbc42bb99d57aeff12db7598370d5410e004c2e2116039260de33"
+
 # KV Namespace binding
 kv_namespaces = [
   { binding = "PRICE_STATE", id = "3bf8c1cc24f24bfd9da7500a7060aacc" }
