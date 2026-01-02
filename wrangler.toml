@@ -8,4 +8,4 @@ id = "3bf8c1cc24f24bfd9da7500a7060aacc"
 [vars]
 TELEGRAPH_TOKEN="fb56a1ddbc42bb99d57aeff12db7598370d5410e004c2e2116039260de33"
 [triggers]
-crons = ["0/15 * * * * ]
+crons = ["*/15 * * * * ]
