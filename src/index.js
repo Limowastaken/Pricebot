@@ -4,891 +4,188 @@ const STATE_KEY = "telegraph_state";
 
 // Jalali Date Converter
 function toJalali(gy, gm, gd) {
-    let g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    let jy = (gy <= 1600) ? 0 : 979;
-    gy -= (gy <= 1600) ? 621 : 1600;
-    let gy2 = (gm > 2) ? (gy + 1) : gy;
-    let days = (365 * gy) + (Math.floor((gy2 + 3) / 4)) - (Math.floor((gy2 + 99) / 100)) 
-               + (Math.floor((gy2 + 399) / 400)) - 80 + gd + g_d_m[gm - 1];
-    jy += 33 * (Math.floor(days / 12053));
-    days %= 12053;
-    jy += 4 * (Math.floor(days / 1461));
-    days %= 1461;
-    jy += Math.floor((days - 1) / 365);
-    if (days > 365) days = (days - 1) % 365;
-    let jm = (days < 186) ? 1 + Math.floor(days / 31) : 7 + Math.floor((days - 186) / 30);
-    let jd = 1 + ((days < 186) ? (days % 31) : ((days - 186) % 30));
-    return { jy, jm, jd };
+  const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy = gy <= 1600 ? 0 : 979;
+  gy -= gy <= 1600 ? 621 : 1600;
+
+  const gy2 = gm > 2 ? gy + 1 : gy;
+  let days =
+    365 * gy +
+    Math.floor((gy2 + 3) / 4) -
+    Math.floor((gy2 + 99) / 100) +
+    Math.floor((gy2 + 399) / 400) -
+    80 +
+    gd +
+    g_d_m[gm - 1];
+
+  jy += 33 * Math.floor(days / 12053);
+  days %= 12053;
+  jy += 4 * Math.floor(days / 1461);
+  days %= 1461;
+
+  jy += Math.floor((days - 1) / 365);
+  if (days > 365) days = (days - 1) % 365;
+
+  const jm = days < 186 ? 1 + Math.floor(days / 31) : 7 + Math.floor((days - 186) / 30);
+  const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+
+  return { jy, jm, jd };
 }
 
 function iranDateTime() {
-    const now = new Date();
-    const iranFormatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Tehran',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-    });
-    
-    const parts = iranFormatter.formatToParts(now);
-    const getPart = (type) => parts.find(p => p.type === type)?.value;
-    
-    const year = parseInt(getPart('year'));
-    const month = parseInt(getPart('month'));
-    const day = parseInt(getPart('day'));
-    const hour = getPart('hour');
-    const minute = getPart('minute');
-    const second = getPart('second');
-    
-    const jalali = toJalali(year, month, day);
-    
-    const dateFa = `${jalali.jy}/${String(jalali.jm).padStart(2, '0')}/${String(jalali.jd).padStart(2, '0')}`;
-    const timeFa = `${hour}:${minute}:${second}`;
-    
-    return { dateFa, timeFa };
+  const now = new Date();
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tehran",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(now);
+  const get = (t) => parts.find((p) => p.type === t)?.value;
+
+  const year = Number(get("year"));
+  const month = Number(get("month"));
+  const day = Number(get("day"));
+
+  const { jy, jm, jd } = toJalali(year, month, day);
+
+  return {
+    dateFa: `${jy}/${String(jm).padStart(2, "0")}/${String(jd).padStart(2, "0")}`,
+    timeFa: `${get("hour")}:${get("minute")}:${get("second")}`,
+  };
 }
 
 function persianToEnglish(str) {
-    const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
-    return str.replace(/[۰-۹]/g, (char) => persianDigits.indexOf(char));
+  const digits = "۰۱۲۳۴۵۶۷۸۹";
+  return str.replace(/[۰-۹]/g, (d) => digits.indexOf(d));
 }
 
-function cleanPrice(priceStr) {
-    if (!priceStr) return 'N/A';
-    let cleaned = persianToEnglish(priceStr);
-    cleaned = cleaned.replace(/[,،\s]/g, '');
-    return Number(cleaned).toLocaleString('en-US');
-}
-
-async function getPrices() {
-    const url = "https://alanchand.com/";
-    const response = await fetch(url, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'fa-IR,fa;q=0.9,en;q=0.8',
-            'Cache-Control': 'no-cache'
-        }
-    });
-    
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const html = await response.text();
-    
-    let usd = 'N/A';
-    let gold18 = 'N/A';
-    let gold24 = 'N/A';
-    
-    const usdPatterns = [
-        /دلار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /dollar[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /usd[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i
-    ];
-    
-    for (const pattern of usdPatterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-            usd = cleanPrice(match[1]);
-            break;
-        }
-    }
-    
-    const gold18Patterns = [
-        /طلا[ی]?\s*۱۸\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /طلا[ی]?\s*18\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*۱۸[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*18[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i
-    ];
-    
-    for (const pattern of gold18Patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-            gold18 = cleanPrice(match[1]);
-            break;
-        }
-    }
-    
-    const gold24Patterns = [
-        /طلا[ی]?\s*۲۴\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /طلا[ی]?\s*24\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*۲۴[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*24[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i
-    ];
-    
-    for (const pattern of gold24Patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-            gold24 = cleanPrice(match[1]);
-            break;
-        }
-    }
-    
-    return { usd, gold18, gold24 };
-}
-
-function buildContent(usd, gold18, gold24) {
-    const { dateFa, timeFa } = iranDateTime();
-    
-    return [
-        { tag: "h3", children: ["📊 قیمت لحظه‌ای بازار ایران"] },
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["💵 دلار: "] },
-            `${usd} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🥇 طلا ۱۸ عیار: "] },
-            `${gold18} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🥇 طلا ۲۴ عیار: "] },
-            `${gold24} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🕒 زمان بروزرسانی:\n"] },
-            `${dateFa} — ${timeFa}`,
-            "\n(به وقت ایران 🇮🇷)"
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "i", children: ["این صفحه هر ۳ ساعت به‌صورت خودکار بروزرسانی می‌شود."] }
-        ]}
-    ];
-}
-
-async function createPage(content, token) {
-    const response = await fetch("https://api.telegra.ph/createPage", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            access_token: token,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            author_name: "Auto Price Bot",
-            content: content,
-            return_content: true
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.ok) {
-        throw new Error(`Telegraph API error: ${JSON.stringify(data)}`);
-    }
-    
-    return {
-        path: data.result.path,
-        url: data.result.url
-    };
-}
-
-async function editPage(path, content, token) {
-    const response = await fetch("https://api.telegra.ph/editPage", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            access_token: token,
-            path: path,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            content: content,
-            return_content: true
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.ok) {
-        throw new Error(`Telegraph API error: ${JSON.stringify(data)}`);
-    }
-    
-    return data.result;
-}
-
-async function loadState(env) {
-    try {
-        const state = await env.PRICE_STATE.get(STATE_KEY, { type: "json" });
-        return state;
-    } catch (e) {
-        return null;
-    }
-}
-
-async function saveState(env, path, url) {
-    await env.PRICE_STATE.put(STATE_KEY, JSON.stringify({ path, url }));
-}
-
-async function handleUpdate(env) {
-    const token = env.TELEGRAPH_TOKEN;
-    
-    const { usd, gold18, gold24 } = await getPrices();
-    console.log(`Prices fetched - USD: ${usd}, Gold18: ${gold18}, Gold24: ${gold24}`);
-    
-    const content = buildContent(usd, gold18, gold24);
-    
-    let state = await loadState(env);
-    
-    if (!state) {
-        const { path, url } = await createPage(content, token);
-        await saveState(env, path, url);
-        console.log(`✅ Telegraph page created: ${url}`);
-        return { action: "created", url };
-    } else {
-        await editPage(state.path, content, token);
-        console.log(`🔁 Page updated: ${state.url}`);
-        return { action: "updated", url: state.url };
-    }
-}
-
-export default {
-    async scheduled(event, env, ctx) {
-        console.log("⏰ Cron triggered at:", new Date().toISOString());
-        ctx.waitUntil(
-            handleUpdate(env)
-                .then(result => console.log("Result:", result))
-                .catch(err => console.error("❌ Error:", err.message))
-        );
-    },
-    
-    async fetch(request, env, ctx) {
-        const url = new URL(request.url);
-        
-        if (url.pathname === "/health") {
-            return new Response(JSON.stringify({ status: "ok", time: new Date().toISOString() }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-        
-        if (url.pathname === "/state") {
-            const state = await loadState(env);
-            return new Response(JSON.stringify(state || { error: "No state found" }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-        
-        if (url.pathname === "/debug") {
-            try {
-                const prices = await getPrices();
-                return new Response(JSON.stringify({
-                    success: true,
-                    source: "https://alanchand.com/",
-                    prices: prices,
-                    timestamp: new Date().toISOString()
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
-            } catch (error) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: error.message
-                }), {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                });
-            }
-        }
-        
-        if (url.pathname === "/update" || url.pathname === "/") {
-            try {
-                const result = await handleUpdate(env);
-                return new Response(JSON.stringify({
-                    success: true,
-                    ...result,
-                    timestamp: new Date().toISOString()
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
-            } catch (error) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: error.message
-                }), {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                });
-            }
-        }
-        
-        return new Response(JSON.stringify({
-            endpoints: {
-                "/": "Trigger update",
-                "/update": "Trigger update",
-                "/state": "Get current state",
-                "/health": "Health check",
-                "/debug": "Debug price parsing"
-            }
-        }), {
-            headers: { "Content-Type": "application/json" }
-        });
-    }
-};    const parts = iranFormatter.formatToParts(now);
-    const getPart = (type) => parts.find(p => p.type === type)?.value;
-    
-    const year = parseInt(getPart('year'));
-    const month = parseInt(getPart('month'));
-    const day = parseInt(getPart('day'));
-    const hour = getPart('hour');
-    const minute = getPart('minute');
-    const second = getPart('second');
-    
-    const jalali = toJalali(year, month, day);
-    
-    const dateFa = `${jalali.jy}/${String(jalali.jm).padStart(2, '0')}/${String(jalali.jd).padStart(2, '0')}`;
-    const timeFa = `${hour}:${minute}:${second}`;
-    
-    return { dateFa, timeFa };
-}
-
-// Helper function to convert Persian numbers to English
-function persianToEnglish(str) {
-    const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
-    return str.replace(/[۰-۹]/g, (char) => persianDigits.indexOf(char));
-}
-
-// Helper function to clean and format price
-function cleanPrice(priceStr) {
-    if (!priceStr) return 'N/A';
-    // Convert Persian digits to English, remove commas and spaces
-    let cleaned = persianToEnglish(priceStr);
-    cleaned = cleaned.replace(/[,،\s]/g, '');
-    // Format with comma separators
-    return Number(cleaned).toLocaleString('en-US');
+function cleanPrice(str) {
+  if (!str) return "N/A";
+  return Number(
+    persianToEnglish(str).replace(/[,،\s]/g, "")
+  ).toLocaleString("en-US");
 }
 
 async function getPrices() {
-    const url = "https://alanchand.com/";
-    const response = await fetch(url, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'fa-IR,fa;q=0.9,en;q=0.8',
-            'Cache-Control': 'no-cache'
-        }
-    });
-    
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  const res = await fetch("https://alanchand.com/", {
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      "Accept-Language": "fa-IR,fa;q=0.9",
+    },
+  });
+
+  if (!res.ok) throw new Error("Failed to fetch prices");
+  const html = await res.text();
+
+  const extract = (patterns) => {
+    for (const p of patterns) {
+      const m = html.match(p);
+      if (m?.[1]) return cleanPrice(m[1]);
     }
-    
-    const html = await response.text();
-    
-    // Extract USD price - looking for dollar/دلار patterns
-    let usd = 'N/A';
-    let gold18 = 'N/A';
-    let gold24 = 'N/A';
-    
-    // Pattern for USD (دلار)
-    // Matches patterns like: دلار ... price or dollar-related elements
-    const usdPatterns = [
-        /دلار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /dollar[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /usd[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /<[^>]*dollar[^>]*>[^<]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /data-price="([۰-۹0-9,،]+)"[^>]*>.*?دلار/i,
-        /دلار.*?<[^>]*>([۰-۹0-9][۰-۹0-9,،\s]*)<\/span>/i
-    ];
-    
-    for (const pattern of usdPatterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-            usd = cleanPrice(match[1]);
-            break;
-        }
-    }
-    
-    // Pattern for Gold 18K (طلای ۱۸ عیار)
-    const gold18Patterns = [
-        /طلا[ی]?\s*۱۸\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /طلا[ی]?\s*18\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*۱۸[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*18[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /18k[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /gold.*?18[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i
-    ];
-    
-    for (const pattern of gold18Patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-            gold18 = cleanPrice(match[1]);
-            break;
-        }
-    }
-    
-    // Pattern for Gold 24K (طلای ۲۴ عیار)
-    const gold24Patterns = [
-        /طلا[ی]?\s*۲۴\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /طلا[ی]?\s*24\s*عیار[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*۲۴[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /گرم\s*24[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /24k[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i,
-        /gold.*?24[^۰-۹0-9]*([۰-۹0-9][۰-۹0-9,،\s]*[۰-۹0-9])/i
-    ];
-    
-    for (const pattern of gold24Patterns) {
-        const match = html.match(pattern);
-        if (match && match[1]) {
-            gold24 = cleanPrice(match[1]);
-            break;
-        }
-    }
-    
-    console.log(`Parsed prices - USD: ${usd}, Gold18: ${gold18}, Gold24: ${gold24}`);
-    
-    return { usd, gold18, gold24 };
+    return "N/A";
+  };
+
+  return {
+    usd: extract([/دلار[^۰-۹0-9]*([۰-۹0-9,]+)/i]),
+    gold18: extract([/۱۸\s*عیار[^۰-۹0-9]*([۰-۹0-9,]+)/i]),
+    gold24: extract([/۲۴\s*عیار[^۰-۹0-9]*([۰-۹0-9,]+)/i]),
+  };
 }
 
 function buildContent(usd, gold18, gold24) {
-    const { dateFa, timeFa } = iranDateTime();
-    
-    return [
-        { tag: "h3", children: ["📊 قیمت لحظه‌ای بازار ایران"] },
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["💵 دلار: "] },
-            `${usd} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🥇 طلا ۱۸ عیار: "] },
-            `${gold18} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🥇 طلا ۲۴ عیار: "] },
-            `${gold24} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🕒 زمان بروزرسانی:\n"] },
-            `${dateFa} — ${timeFa}`,
-            "\n(به وقت ایران 🇮🇷)"
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "i", children: ["این صفحه هر ۳ ساعت به‌صورت خودکار بروزرسانی می‌شود."] }
-        ]}
-    ];
+  const { dateFa, timeFa } = iranDateTime();
+
+  return [
+    { tag: "h3", children: ["📊 قیمت لحظه‌ای بازار ایران"] },
+    { tag: "p", children: [{ tag: "b", children: ["💵 دلار: "] }, `${usd} تومان`] },
+    { tag: "p", children: [{ tag: "b", children: ["🥇 طلا ۱۸ عیار: "] }, `${gold18} تومان`] },
+    { tag: "p", children: [{ tag: "b", children: ["🥇 طلا ۲۴ عیار: "] }, `${gold24} تومان`] },
+    {
+      tag: "p",
+      children: [
+        { tag: "b", children: ["🕒 زمان بروزرسانی: "] },
+        `${dateFa} — ${timeFa} (به وقت ایران 🇮🇷)`,
+      ],
+    },
+  ];
 }
 
 async function createPage(content, token) {
-    const response = await fetch("https://api.telegra.ph/createPage", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            access_token: token,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            author_name: "Auto Price Bot",
-            content: content,
-            return_content: true
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.ok) {
-        throw new Error(`Telegraph API error: ${JSON.stringify(data)}`);
-    }
-    
-    return {
-        path: data.result.path,
-        url: data.result.url
-    };
+  const r = await fetch("https://api.telegra.ph/createPage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      access_token: token,
+      title: "قیمت دلار و طلا | بروزرسانی خودکار",
+      author_name: "Auto Price Bot",
+      content,
+    }),
+  });
+
+  const d = await r.json();
+  if (!d.ok) throw new Error("Telegraph create failed");
+  return d.result;
 }
 
 async function editPage(path, content, token) {
-    const response = await fetch("https://api.telegra.ph/editPage", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            access_token: token,
-            path: path,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            content: content,
-            return_content: true
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.ok) {
-        throw new Error(`Telegraph API error: ${JSON.stringify(data)}`);
-    }
-    
-    return data.result;
+  const r = await fetch("https://api.telegra.ph/editPage", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      access_token: token,
+      path,
+      title: "قیمت دلار و طلا | بروزرسانی خودکار",
+      content,
+    }),
+  });
+
+  const d = await r.json();
+  if (!d.ok) throw new Error("Telegraph edit failed");
+  return d.result;
 }
 
 async function loadState(env) {
-    try {
-        const state = await env.PRICE_STATE.get(STATE_KEY, { type: "json" });
-        return state;
-    } catch (e) {
-        return null;
-    }
+  return env.PRICE_STATE.get(STATE_KEY, { type: "json" });
 }
 
 async function saveState(env, path, url) {
-    await env.PRICE_STATE.put(STATE_KEY, JSON.stringify({ path, url }));
+  await env.PRICE_STATE.put(STATE_KEY, JSON.stringify({ path, url }));
 }
 
 async function handleUpdate(env) {
-    const token = env.TELEGRAPH_TOKEN;
-    
-    // Get current prices from alanchand.com
-    const { usd, gold18, gold24 } = await getPrices();
-    console.log(`Prices fetched - USD: ${usd}, Gold18: ${gold18}, Gold24: ${gold24}`);
-    
-    // Build content
-    const content = buildContent(usd, gold18, gold24);
-    
-    // Load state
-    let state = await loadState(env);
-    
-    if (!state) {
-        // Create new page
-        const { path, url } = await createPage(content, token);
-        await saveState(env, path, url);
-        console.log(`✅ Telegraph page created: ${url}`);
-        return { action: "created", url };
-    } else {
-        // Edit existing page
-        await editPage(state.path, content, token);
-        console.log(`🔁 Page updated: ${state.url}`);
-        return { action: "updated", url: state.url };
-    }
-}
+  const prices = await getPrices();
+  const content = buildContent(prices.usd, prices.gold18, prices.gold24);
+  const state = await loadState(env);
 
-// ================= EXPORTS =================
+  if (!state) {
+    const { path, url } = await createPage(content, env.TELEGRAPH_TOKEN);
+    await saveState(env, path, url);
+    return { action: "created", url };
+  }
+
+  await editPage(state.path, content, env.TELEGRAPH_TOKEN);
+  return { action: "updated", url: state.url };
+}
 
 export default {
-    // Scheduled trigger (cron) - runs every 3 hours
-    async scheduled(event, env, ctx) {
-        console.log("⏰ Cron triggered at:", new Date().toISOString());
-        ctx.waitUntil(
-            handleUpdate(env)
-                .then(result => console.log("Result:", result))
-                .catch(err => console.error("❌ Error:", err.message))
-        );
-    },
-    
-    // HTTP trigger (manual/test)
-    async fetch(request, env, ctx) {
-        const url = new URL(request.url);
-        
-        // Health check endpoint
-        if (url.pathname === "/health") {
-            return new Response(JSON.stringify({ status: "ok", time: new Date().toISOString() }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-        
-        // Get current state
-        if (url.pathname === "/state") {
-            const state = await loadState(env);
-            return new Response(JSON.stringify(state || { error: "No state found" }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-        
-        // Debug endpoint to see raw HTML parsing
-        if (url.pathname === "/debug") {
-            try {
-                const prices = await getPrices();
-                return new Response(JSON.stringify({
-                    success: true,
-                    source: "https://alanchand.com/",
-                    prices: prices,
-                    timestamp: new Date().toISOString()
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
-            } catch (error) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: error.message
-                }), {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                });
-            }
-        }
-        
-        // Manual update trigger
-        if (url.pathname === "/update" || url.pathname === "/") {
-            try {
-                const result = await handleUpdate(env);
-                return new Response(JSON.stringify({
-                    success: true,
-                    ...result,
-                    timestamp: new Date().toISOString()
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
-            } catch (error) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: error.message
-                }), {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                });
-            }
-        }
-        
-        // Default response
-        return new Response(JSON.stringify({
-            endpoints: {
-                "/": "Trigger update",
-                "/update": "Trigger update",
-                "/state": "Get current state",
-                "/health": "Health check",
-                "/debug": "Debug price parsing"
-            }
-        }), {
-            headers: { "Content-Type": "application/json" }
-        });
+  async scheduled(_, env, ctx) {
+    ctx.waitUntil(handleUpdate(env));
+  },
+
+  async fetch(req, env) {
+    const url = new URL(req.url);
+    if (url.pathname === "/health") {
+      return Response.json({ ok: true });
     }
-};    const parts = iranFormatter.formatToParts(now);
-    const getPart = (type) => parts.find(p => p.type === type)?.value;
-    
-    const year = parseInt(getPart('year'));
-    const month = parseInt(getPart('month'));
-    const day = parseInt(getPart('day'));
-    const hour = getPart('hour');
-    const minute = getPart('minute');
-    const second = getPart('second');
-    
-    const jalali = toJalali(year, month, day);
-    
-    const dateFa = `${jalali.jy}/${String(jalali.jm).padStart(2, '0')}/${String(jalali.jd).padStart(2, '0')}`;
-    const timeFa = `${hour}:${minute}:${second}`;
-    
-    return { dateFa, timeFa };
-}
 
-async function getPrices() {
-    const url = "https://call.tgju.org/ajax.json";
-    const response = await fetch(url, {
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-    });
-    
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    const usd = data.current.price_dollar_rl.p;
-    const gold18 = data.current.geram18.p;
-    const gold24 = data.current.geram24.p;
-    
-    return { usd, gold18, gold24 };
-}
-
-function buildContent(usd, gold18, gold24) {
-    const { dateFa, timeFa } = iranDateTime();
-    
-    return [
-        { tag: "h3", children: ["📊 قیمت لحظه‌ای بازار ایران"] },
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["💵 دلار: "] },
-            `${usd} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🥇 طلا ۱۸ عیار: "] },
-            `${gold18} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🥇 طلا ۲۴ عیار: "] },
-            `${gold24} تومان`
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "b", children: ["🕒 زمان بروزرسانی:\n"] },
-            `${dateFa} — ${timeFa}`,
-            "\n(به وقت ایران 🇮🇷)"
-        ]},
-        
-        { tag: "p", children: [
-            { tag: "i", children: ["این صفحه هر ۶ ساعت به‌صورت خودکار بروزرسانی می‌شود."] }
-        ]}
-    ];
-}
-
-async function createPage(content, token) {
-    const response = await fetch("https://api.telegra.ph/createPage", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            access_token: token,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            author_name: "Auto Price Bot",
-            content: content,
-            return_content: true
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.ok) {
-        throw new Error(`Telegraph API error: ${JSON.stringify(data)}`);
-    }
-    
-    return {
-        path: data.result.path,
-        url: data.result.url
-    };
-}
-
-async function editPage(path, content, token) {
-    const response = await fetch("https://api.telegra.ph/editPage", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            access_token: token,
-            path: path,
-            title: "قیمت دلار و طلا | بروزرسانی خودکار",
-            content: content,
-            return_content: true
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.ok) {
-        throw new Error(`Telegraph API error: ${JSON.stringify(data)}`);
-    }
-    
-    return data.result;
-}
-
-async function loadState(env) {
-    try {
-        const state = await env.PRICE_STATE.get(STATE_KEY, { type: "json" });
-        return state;
-    } catch (e) {
-        return null;
-    }
-}
-
-async function saveState(env, path, url) {
-    await env.PRICE_STATE.put(STATE_KEY, JSON.stringify({ path, url }));
-}
-
-async function handleUpdate(env) {
-    const token = env.TELEGRAPH_TOKEN;
-    
-    // Get current prices
-    const { usd, gold18, gold24 } = await getPrices();
-    console.log(`Prices fetched - USD: ${usd}, Gold18: ${gold18}, Gold24: ${gold24}`);
-    
-    // Build content
-    const content = buildContent(usd, gold18, gold24);
-    
-    // Load state
-    let state = await loadState(env);
-    
-    if (!state) {
-        // Create new page
-        const { path, url } = await createPage(content, token);
-        await saveState(env, path, url);
-        console.log(`✅ Telegraph page created: ${url}`);
-        return { action: "created", url };
-    } else {
-        // Edit existing page
-        await editPage(state.path, content, token);
-        console.log(`🔁 Page updated: ${state.url}`);
-        return { action: "updated", url: state.url };
-    }
-}
-
-// ================= EXPORTS =================
-
-export default {
-    // Scheduled trigger (cron)
-    async scheduled(event, env, ctx) {
-        console.log("⏰ Cron triggered at:", new Date().toISOString());
-        ctx.waitUntil(
-            handleUpdate(env)
-                .then(result => console.log("Result:", result))
-                .catch(err => console.error("❌ Error:", err.message))
-        );
-    },
-    
-    // HTTP trigger (manual/test)
-    async fetch(request, env, ctx) {
-        const url = new URL(request.url);
-        
-        // Health check endpoint
-        if (url.pathname === "/health") {
-            return new Response(JSON.stringify({ status: "ok", time: new Date().toISOString() }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-        
-        // Get current state
-        if (url.pathname === "/state") {
-            const state = await loadState(env);
-            return new Response(JSON.stringify(state || { error: "No state found" }), {
-                headers: { "Content-Type": "application/json" }
-            });
-        }
-        
-        // Manual update trigger
-        if (url.pathname === "/update" || url.pathname === "/") {
-            try {
-                const result = await handleUpdate(env);
-                return new Response(JSON.stringify({
-                    success: true,
-                    ...result,
-                    timestamp: new Date().toISOString()
-                }), {
-                    headers: { "Content-Type": "application/json" }
-                });
-            } catch (error) {
-                return new Response(JSON.stringify({
-                    success: false,
-                    error: error.message
-                }), {
-                    status: 500,
-                    headers: { "Content-Type": "application/json" }
-                });
-            }
-        }
-        
-        // Default response
-        return new Response(JSON.stringify({
-            endpoints: {
-                "/": "Trigger update",
-                "/update": "Trigger update",
-                "/state": "Get current state",
-                "/health": "Health check"
-            }
-        }), {
-            headers: { "Content-Type": "application/json" }
-        });
-    }
+    const result = await handleUpdate(env);
+    return Response.json(result);
+  },
 };
