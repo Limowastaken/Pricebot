@@ -99,9 +99,7 @@ function buildContent(usd, gold18, gold24) {
             `${dateFa} — ${timeFa}`,
             "\n(به وقت ایران 🇮🇷)"
         ]},
-        
-        { tag: "p", children: [
-            { tag: "i", children:["       "] }
+    
         ]}
     ];
 }
