@@ -101,7 +101,7 @@ function buildContent(usd, gold18, gold24) {
         ]},
         
         { tag: "p", children: [
-            { tag: "i", children: ["این صفحه هر ۶ ساعت به‌صورت خودکار بروزرسانی می‌شود."] }
+            { tag: "i", children:["       "] }
         ]}
     ];
 }
