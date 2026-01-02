@@ -263,32 +263,7 @@ export default {
             headers: { "Content-Type": "application/json" }
         });
     }
-};
-And make it update every 3hours instead of 6 hours    }
-  ];
-}
-
-// ---------- TELEGRAPH API ----------
-async function createPage(content, token) {
-  const res = await fetch(`${TELEGRAPH_API}/createPage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      access_token: token,
-      title: "قیمت لحظه‌ای بازار",
-      author_name: "Market Bot",
-      content,
-      return_content: false
-    })
-  });
-  const json = await res.json();
-  return json.result;
-}
-
-async function editPage(path, content, token) {
-  await fetch(`${TELEGRAPH_API}/editPage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+};    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       access_token: token,
       path,
